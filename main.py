@@ -1,39 +1,23 @@
-import requests
-import pandas as pd
-import json
+from api.riot import get_player, get_champion_mastery, get_match_history, get_match
+from api.dragon import load_champions
+from data.processor import process_mastery, process_matches
+from config import REGION
 
-from utils import create_url
-
-REGION = "europe"       # Régional
-PLATFORM = "euw1"       # Plateforme
 SUMMONER_NAME = "Liquid Platypus"
 TAG_LINE = "FEET"
 
-player_data = requests.get(**create_url(
-    "/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}",
-    region=REGION,
-    gameName=SUMMONER_NAME,
-    tagLine=TAG_LINE
-)).json()
+# Joueur
+player = get_player(SUMMONER_NAME, TAG_LINE)
+puuid = player["puuid"]
 
-player_mastery = requests.get(**create_url(
-    "/lol/champion-mastery/v4/champion-masteries/by-puuid/{encryptedPUUID}",
-    region=PLATFORM,
-    encryptedPUUID=player_data["puuid"]
-)).json()
+# Mastery
+mastery_raw = get_champion_mastery(puuid)
+champion_map = load_champions()
+df_mastery = process_mastery(mastery_raw, champion_map)
+df_mastery.to_csv("player_mastery.csv", index=False)
 
-with open("dragontail-16.12.1/16.12.1/data/fr_FR/champion.json") as f:
-    champions_raw = json.load(f)
-
-champion_id_to_name = {
-    int(champ["key"]): champ["name"]
-    for champ in champions_raw["data"].values()
-}
-
-df = pd.json_normalize(player_mastery)
-df["championName"] = df["championId"].map(champion_id_to_name)
-
-df.drop(columns=["championId"], inplace=True)
-df.drop(columns=["puuid"], inplace=True)
-df = df.iloc[:, [-1] + list(range(df.shape[1] - 1))]
-df.to_csv("player_mastery.csv", index=False)
+# Matchs
+match_ids = get_match_history(puuid)
+matches_raw = [get_match(mid) for mid in match_ids]
+df_matches = process_matches(matches_raw)
+df_matches.to_csv("matches_history.csv", index=False)

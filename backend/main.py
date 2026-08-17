@@ -24,9 +24,9 @@
 
 from fastapi import FastAPI
 
-from backend.api.riot import get_player as riot_get_player, get_champion_mastery
-from backend.api.dragon import load_champions
-from backend.data.processor import process_mastery
+from api.riot import get_player as riot_get_player, get_champion_mastery
+from api.dragon import load_champions
+from data.processor import process_mastery
 
 app = FastAPI()
 

@@ -1,7 +1,11 @@
 import json
+import os
+from config import DRAGON_PATH
 
-def load_champions(path="dragontail-16.13.1/16.13.1/data/fr_FR/champion.json"):
-    with open(path) as f:
+def load_champions(path=None):
+    if path is None:
+        path = os.path.join(DRAGON_PATH, "champion.json")
+    with open(path, encoding="utf-8") as f:
         champions_raw = json.load(f)
 
     return {

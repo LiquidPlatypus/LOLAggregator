@@ -1,8 +1,8 @@
 import streamlit as st
 import plotly.express as px
-from api.riot import get_player, get_champion_mastery
-from api.dragon import load_champions
-from data.processor import process_mastery
+from backend.api.riot import get_player, get_champion_mastery
+from backend.api.dragon import load_champions
+from backend.data.processor import process_mastery
 
 if "summoner" not in st.session_state:
     st.warning("Recherchez un joueur dans la barre latérale")

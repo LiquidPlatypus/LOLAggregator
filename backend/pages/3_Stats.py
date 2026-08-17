@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
-from api.riot import get_player, get_match_history, get_match
-from data.processor import process_matches
+from backend.api.riot import get_player, get_match_history, get_match
+from backend.data.processor import process_matches
 
 if "summoner" not in st.session_state:
     st.warning("Recherchez un jouer dans la barre latérale")

@@ -1,0 +1,38 @@
+.container {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.leftSide {
+	display: flex;
+	flex-direction: column;
+}
+
+.profileInfos {
+	display: flex;
+	flex-direction: row;
+}
+
+.champsList {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.rightSide {
+	display: flex;
+	flex-direction: column;
+}
+
+.mostPlayedChamps {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 10px;
+	list-style: none;
+}
+
+.matchsHistory {
+	display: grid;
+	grid-template-columns: 30px 1fr;
+}

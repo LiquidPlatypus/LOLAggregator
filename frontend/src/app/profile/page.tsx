@@ -1,6 +1,25 @@
 import styles from "./page.module.css";
 import Image from "next/image";
 
+interface ChampionMastery {
+	championName: string;
+	championId: number;
+	championLevel: number;
+	championPoints: number;
+	lastPlayTime: string;
+	championPointsSinceLastLevel: number;
+	championPointsUntilNextLevel: number;
+	markRequiredForNextLevel: number;
+	tokensEarned: number;
+	championSeasonMilestone: number;
+	milestoneGrades: string[];
+	"nextSeasonMilestone.requireGradeCounts.S-": number;
+	"nextSeasonMilestone.rewardMarks": number;
+	"nextSeasonMilestone.bonus": boolean;
+	"nextSeasonMilestone.totalGamesRequires": number;
+	"nextSeasonMilestone.requireGradeCounts.A-": number;
+}
+
 export default async function profilePage({
 	searchParams,
 }: {
@@ -37,7 +56,7 @@ export default async function profilePage({
 			</div>
 			<div className={styles.rightSide}>
 				<div className={styles.mostPlayedChamps}>
-					{data.top_mastery.map(champs => (
+					{data.top_mastery.map((champs: ChampionMastery) => (
 						<li key={champs["championId"]}>
 							<Image
 								src={

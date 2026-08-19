@@ -17,6 +17,13 @@ def get_player(game_name, tag_line):
         tagLine=tag_line
     )
 
+def get_summoner(puuid):
+    return _get(
+        PLATFORM_BASE,
+        "/lol/summoner/v4/summoners/by-puuid/{puuid}",
+        puuid=puuid
+    )
+
 def get_champion_mastery(puuid):
     return _get(
         PLATFORM_BASE,

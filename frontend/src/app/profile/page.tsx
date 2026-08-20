@@ -3,6 +3,7 @@ import Image from "next/image";
 
 interface ChampionMastery {
 	championName: string;
+	championIdString: string;
 	championId: number;
 	championLevel: number;
 	championPoints: number;
@@ -32,7 +33,7 @@ export default async function profilePage({
 		return <h1>Player not found</h1>;
 	}
 	const data = await res.json();
-	console.log(data.top_mastery[0]);
+	console.log(data.matchs_history);
 
 	return (
 		<div className={styles.container}>
@@ -52,7 +53,24 @@ export default async function profilePage({
 					<h3>{data.player.gameName}</h3>
 					<h4>{data.player.tagLine}</h4>
 				</div>
-				<div className={styles.champsList}></div>
+				<div className={styles.champsList}>
+					{data.mastery.map((champs: ChampionMastery) => (
+						<li className={styles.champListli} key={champs.championId}>
+							<Image
+								src={
+									"http://localhost:8000/static/champion/" +
+									champs["championIdString"] +
+									".png"
+								}
+								alt="champ"
+								width={50}
+								height={50}
+								priority={true}
+							/>
+							<h3>{champs["championName"]}</h3>
+						</li>
+					))}
+				</div>
 			</div>
 			<div className={styles.rightSide}>
 				<div className={styles.mostPlayedChamps}>
@@ -72,7 +90,13 @@ export default async function profilePage({
 						</li>
 					))}
 				</div>
-				<div className={styles.matchsHistory}></div>
+				<div className={styles.matchsHistory}>
+					{data.matchs_history.map(match => (
+						<li key={match["info.gameId"]}>
+							<p>{match["metadata.matchId"]}</p>
+						</li>
+					))}
+				</div>
 			</div>
 		</div>
 	);

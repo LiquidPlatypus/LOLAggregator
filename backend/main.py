@@ -1,33 +1,9 @@
-# from api.riot import get_player, get_champion_mastery, get_match_history, get_match
-# from api.dragon import load_champions
-# from data.processor import process_mastery, process_matches
-# from config import REGION
-#
-# SUMMONER_NAME = "Liquid Platypus"
-# TAG_LINE = "FEET"
-#
-# # Joueur
-# player = get_player(SUMMONER_NAME, TAG_LINE)
-# puuid = player["puuid"]
-#
-# # Mastery
-# mastery_raw = get_champion_mastery(puuid)
-# champion_map = load_champions()
-# df_mastery = process_mastery(mastery_raw, champion_map)
-# df_mastery.to_csv("player_mastery.csv", index=False)
-#
-# # Matchs
-# match_ids = get_match_history(puuid)
-# matches_raw = [get_match(mid) for mid in match_ids]
-# df_matches = process_matches(matches_raw)
-# df_matches.to_csv("matches_history.csv", index=False)
-
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery
+from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery, get_match_history, get_match
 from api.dragon import load_champions
-from data.processor import process_mastery, get_top_champs
+from data.processor import process_mastery, get_top_champs, process_matches
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="dragontail-16.16.1/16.16.1/img"), name="static")
@@ -36,6 +12,7 @@ app.mount("/static", StaticFiles(directory="dragontail-16.16.1/16.16.1/img"), na
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 
 @app.get("/player/{game_name}/{tag_line}")
 def read_player(game_name: str, tag_line: str):
@@ -46,10 +23,15 @@ def read_player(game_name: str, tag_line: str):
     mastery = process_mastery(mastery_raw, champion_map)
     top_mastery = get_top_champs(mastery, 5)
 
+    match_ids = get_match_history(player["puuid"])
+    matchs_raw = [get_match(mid) for mid in match_ids]
+    matchs_history = process_matches(matchs_raw)
+
     ret_dict = {
         "player": player,
         "summoner": summoner,
         "mastery": mastery.to_dict(orient="records"),
-        "top_mastery": top_mastery.to_dict(orient="records")}
+        "top_mastery": top_mastery.to_dict(orient="records"),
+        "matchs_history": matchs_history.to_dict(orient="records")}
 
     return ret_dict

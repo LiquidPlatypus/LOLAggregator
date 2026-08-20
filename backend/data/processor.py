@@ -2,7 +2,8 @@ import pandas as pd
 
 def process_mastery(mastery_raw, champion_id_to_name):
     df = pd.json_normalize(mastery_raw)
-    df["championName"] = df["championId"].map(champion_id_to_name).fillna("Unknown")
+    df["championName"] = df["championId"].map(lambda x: champion_id_to_name.get(x, {}).get("name", "Unknown"))
+    df["championIdString"] = df["championId"].map(lambda x: champion_id_to_name.get(x, {}).get("id", "Unknown"))
     df = df.fillna(0)
     df["lastPlayTime"] = pd.to_datetime(df["lastPlayTime"], unit="ms").dt.strftime("%d-%m-%Y %H:%M:%S")
     df.drop(columns=["puuid"], inplace=True)

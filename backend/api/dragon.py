@@ -9,6 +9,8 @@ def load_champions(path=None):
         champions_raw = json.load(f)
 
     return {
-        int(champ["key"]): champ["name"]
+        int(champ["key"]): {
+            "id": champ["id"],
+            "name": champ["name"],}
         for champ in champions_raw["data"].values()
     }

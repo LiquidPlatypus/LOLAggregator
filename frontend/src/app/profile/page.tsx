@@ -21,6 +21,11 @@ interface ChampionMastery {
 	"nextSeasonMilestone.requireGradeCounts.A-": number;
 }
 
+interface Matchs {
+	"match.info.gameId": number;
+	"match.metadata.matchId": string;
+}
+
 export default async function profilePage({
 	searchParams,
 }: {
@@ -33,7 +38,6 @@ export default async function profilePage({
 		return <h1>Player not found</h1>;
 	}
 	const data = await res.json();
-	console.log(data.matchs_history);
 
 	return (
 		<div className={styles.container}>
@@ -54,7 +58,7 @@ export default async function profilePage({
 					<h4>{data.player.tagLine}</h4>
 				</div>
 				<div className={styles.champsList}>
-					{data.mastery.map((champs: ChampionMastery) => (
+					{data.mastery.filter(champs => (champs.championName !== "Unknown")).map((champs: ChampionMastery) => (
 						<li className={styles.champListli} key={champs.championId}>
 							<Image
 								src={
@@ -74,12 +78,12 @@ export default async function profilePage({
 			</div>
 			<div className={styles.rightSide}>
 				<div className={styles.mostPlayedChamps}>
-					{data.top_mastery.map((champs: ChampionMastery) => (
+					{data.top_mastery.filter(champs => (champs.championName !== "Unknown")).map((champs: ChampionMastery) => (
 						<li key={champs["championId"]}>
 							<Image
 								src={
 									"http://localhost:8000/static/champion/" +
-									champs["championName"] +
+									champs["championIdString"] +
 									".png"
 								}
 								alt="champ pp"
@@ -91,9 +95,9 @@ export default async function profilePage({
 					))}
 				</div>
 				<div className={styles.matchsHistory}>
-					{data.matchs_history.map(match => (
-						<li key={match["info.gameId"]}>
-							<p>{match["metadata.matchId"]}</p>
+					{data.matchs_history.map((match: Matchs) => (
+						<li key={match["match.info.gameId"]}>
+							<p>{match["match.metadata.matchId"]}</p>
 						</li>
 					))}
 				</div>

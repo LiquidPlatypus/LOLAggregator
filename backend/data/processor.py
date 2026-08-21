@@ -15,5 +15,25 @@ def process_mastery(mastery_raw, champion_id_to_name):
 def get_top_champs(df_mastery, nb_to_show = 5):
     return df_mastery.nlargest(nb_to_show, "championPoints")
 
-def process_matches(matches_raw):
-    return pd.json_normalize(matches_raw)
+def process_matches(matches_raw, puuid):
+    matches_with_participant = []
+
+    for match in matches_raw:
+        participant = next(
+            (p for p in match["info"]["participants"] if p["puuid"] == puuid),
+            None
+        )
+        matches_with_participant.append({
+            "match": match,
+            "participant": participant
+        })
+
+    df = pd.json_normalize(matches_with_participant)
+
+    numeric_cols = df.select_dtypes(include="number").columns
+    df[numeric_cols] = df[numeric_cols].fillna(0)
+
+    other_cols = df.select_dtypes(exclude="number").columns
+    df[other_cols] = df[other_cols].fillna("")
+
+    return df

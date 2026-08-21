@@ -24,6 +24,7 @@ interface ChampionMastery {
 interface Matchs {
 	"match.info.gameId": number;
 	"match.metadata.matchId": string;
+	"participant.championIdString": string;
 }
 
 export default async function profilePage({
@@ -38,6 +39,7 @@ export default async function profilePage({
 		return <h1>Player not found</h1>;
 	}
 	const data = await res.json();
+
 
 	return (
 		<div className={styles.container}>
@@ -97,6 +99,17 @@ export default async function profilePage({
 				<div className={styles.matchsHistory}>
 					{data.matchs_history.map((match: Matchs) => (
 						<li key={match["match.info.gameId"]}>
+							<Image
+								src={
+									"http://localhost:8000/static/champion/" +
+									match["participant.championIdString"] +
+									".png"
+								}
+								alt="champ pp"
+								width={30}
+								height={30}
+								priority={true}
+							/>
 							<p>{match["match.metadata.matchId"]}</p>
 						</li>
 					))}

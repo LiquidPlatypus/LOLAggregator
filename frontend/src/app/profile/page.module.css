@@ -38,5 +38,4 @@
 
 .matchsHistory {
 	display: grid;
-	grid-template-columns: 30px 1fr;
 }

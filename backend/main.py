@@ -25,7 +25,7 @@ def read_player(game_name: str, tag_line: str):
 
     match_ids = get_match_history(player["puuid"])
     matchs_raw = [get_match(mid) for mid in match_ids]
-    matchs_history = process_matches(matchs_raw, player["puuid"])
+    matchs_history = process_matches(matchs_raw, champion_map, player["puuid"])
 
     ret_dict = {
         "player": player,

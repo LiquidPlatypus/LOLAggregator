@@ -7,7 +7,9 @@ PLATFORM_BASE = f"https://{PLATFORM}.api.riotgames.com"
 
 def _get(base, endpoint, **kwargs):
     url = f"{base}{endpoint.format(**kwargs)}"
-    return requests.get(url, headers=HEADERS).json()
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()
 
 def get_player(game_name, tag_line):
     return _get(
@@ -31,11 +33,12 @@ def get_champion_mastery(puuid):
         puuid=puuid
     )
 
-def get_match_history(puuid, count=20):
+def get_match_history(puuid, start=0, count=10):
     return _get(
         REGIONAL_BASE,
-        "/lol/match/v5/matches/by-puuid/{puuid}/ids?count={count}",
+        "/lol/match/v5/matches/by-puuid/{puuid}/ids?start={start}&count={count}",
         puuid=puuid,
+        start=start,
         count=count
     )
 

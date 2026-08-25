@@ -1,7 +1,8 @@
 .container {
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
+	justify-content: center;
+	gap: 3rem;
 }
 
 .leftSide {
@@ -18,6 +19,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
+
+	height: 400px;
+	overflow-y: auto;
 }
 
 .champListli {

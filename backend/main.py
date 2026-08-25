@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from concurrent.futures import ThreadPoolExecutor
 
 from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery, get_match_history, get_match
 from api.dragon import load_champions
@@ -48,7 +49,8 @@ def read_match(puuid: str, page: int = 1, count: int = 10):
     start = (page - 1) * count
     match_ids = get_match_history(puuid, start=start, count=count)
     champion_map = load_champions()
-    matchs_raw = [get_match(mid) for mid in match_ids]
+    with ThreadPoolExecutor() as executor:
+        matchs_raw = list(executor.map(get_match, match_ids))
     matchs_history = process_matches(matchs_raw, champion_map, puuid)
 
     return matchs_history.to_dict(orient="records")

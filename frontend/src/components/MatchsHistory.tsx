@@ -9,11 +9,16 @@ import Image from "next/image";
 export default function MatchsHistory({ puuid }: { puuid: string }) {
 	const [pageNumber, setPageNumber] = useState<number>(1);
 	const [matchsList, setMatchsList] = useState<Matchs[]>([]);
+	const [isLastPage, setIsLastPage] = useState<boolean>(false);
 
 	useEffect(() => {
 		fetch(`http://localhost:8000/matchs/${puuid}?page=${pageNumber}`)
 			.then(res => res.json())
-			.then(data => setMatchsList(data));
+			.then(data => {
+				setMatchsList(data);
+				if (data.length < 10) setIsLastPage(true);
+				else setIsLastPage(false);
+			});
 	}, [puuid, pageNumber]);
 
 	return (
@@ -41,8 +46,16 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 			>
 				<p>{"<"}</p>
 			</button>
-			<p>{pageNumber}</p>
-			<button onClick={() => setPageNumber(pageNumber + 1)}>
+			<input
+				type="number"
+				value={pageNumber}
+				onChange={e => setPageNumber(parseInt(e.target.value) || 1)}
+			/>
+			<button
+				onClick={() => {
+					if (!isLastPage) setPageNumber(pageNumber + 1);
+				}}
+			>
 				<p>{">"}</p>
 			</button>
 		</div>

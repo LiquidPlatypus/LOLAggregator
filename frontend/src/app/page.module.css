@@ -15,7 +15,9 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-geist-sans);
-  background-color: var(--background);
+  background-image: url("../../public/background.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
 .main {
@@ -24,10 +26,10 @@
   width: 100%;
   max-width: 800px;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  background-color: var(--foreground);
+  align-items: center;
+  justify-content: center;
   padding: 120px 60px;
+  backdrop-filter: blur(10px);
 }
 
 .intro {

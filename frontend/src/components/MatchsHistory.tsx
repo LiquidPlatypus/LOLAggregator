@@ -10,35 +10,58 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 	const [pageNumber, setPageNumber] = useState<number>(1);
 	const [matchsList, setMatchsList] = useState<Matchs[]>([]);
 	const [isLastPage, setIsLastPage] = useState<boolean>(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	useEffect(() => {
+		setErrorMessage(null);
+		setIsLoading(true);
+
 		fetch(`http://localhost:8000/matchs/${puuid}?page=${pageNumber}`)
-			.then(res => res.json())
+			.then(res => {
+				if (!res.ok) {
+					throw new Error("Error during matches loading");
+				}
+				return res.json();
+			})
 			.then(data => {
 				setMatchsList(data);
 				if (data.length < 10) setIsLastPage(true);
 				else setIsLastPage(false);
+			})
+			.catch(error => {
+				console.error("Error during matches loading", error);
+				setErrorMessage("Can't load matches, please try again later.");
+			})
+			.finally(() => {
+				setIsLoading(false);
 			});
 	}, [puuid, pageNumber]);
 
 	return (
 		<div className={styles.matchsHistory}>
-			{matchsList.map((match: Matchs) => (
-				<li key={match["match.info.gameId"]}>
-					<Image
-						src={
-							"http://localhost:8000/static/champion/" +
-							match["participant.championIdString"] +
-							".png"
-						}
-						alt="champ pp"
-						width={30}
-						height={30}
-						priority={true}
-					/>
-					<p>{match["match.metadata.matchId"]}</p>
-				</li>
-			))}
+			{isLoading ? (
+				<p>Chargement...</p>
+			) : errorMessage ? (
+				<p className={styles.error}>{errorMessage}</p>
+			) : (
+				matchsList.map((match: Matchs) => (
+					<li key={match["match.info.gameId"]}>
+						<Image
+							src={
+								"http://localhost:8000/static/champion/" +
+								match["participant.championIdString"] +
+								".png"
+							}
+							alt="champ pp"
+							width={30}
+							height={30}
+							priority={true}
+						/>
+						<p>{match["match.metadata.matchId"]}</p>
+					</li>
+				))
+			)}
 			<button
 				onClick={() => {
 					if (pageNumber > 1) setPageNumber(pageNumber - 1);

@@ -20,6 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory="dragontail-16.16.1/16.16.1/img"), name="static")
+app.mount("/img", StaticFiles(directory="dragontail-16.16.1/img"), name="dragontail")
 
 
 @app.get("/")

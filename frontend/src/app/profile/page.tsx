@@ -2,6 +2,7 @@ import MatchsHistory from "@/components/MatchsHistory";
 
 import styles from "./page.module.css";
 import Image from "next/image";
+import React from "react";
 
 interface ChampionMastery {
 	championName: string;
@@ -63,9 +64,17 @@ export default async function profilePage({
 	}
 	const data = (await res.json()) as PlayerResponse;
 
+	const backgroundImageId = data.top_mastery[0].championIdString;
+	const backgroundImageUrl = `http://localhost:8000/img/champion/splash/${backgroundImageId}_0.jpg`;
+
 	return (
-		<div className={styles.container}>
-			<div className={styles.leftSide}>
+		<div
+			className={styles.container}
+			style={{
+				"--backgroundImageUrl": `url(${backgroundImageUrl})`,
+			} as React.CSSProperties}
+		>
+		<div className={styles.leftSide}>
 				<div className={styles.profileInfos}>
 					<Image
 						src={

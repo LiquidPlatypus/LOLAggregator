@@ -1,0 +1,17 @@
+.matchsHistory {
+	display: flex;
+	flex-direction: column;
+
+	gap: 16px;
+	padding-bottom: 5px;
+}
+
+.matchItem {
+	display: flex;
+	flex-direction: row;
+
+	padding: 16px;
+
+	border: 1px solid lightgray;
+	border-radius: 10px;
+}

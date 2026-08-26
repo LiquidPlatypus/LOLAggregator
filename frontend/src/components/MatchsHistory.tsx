@@ -39,29 +39,31 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 	}, [puuid, pageNumber]);
 
 	return (
-		<div className={styles.matchsHistory}>
-			{isLoading ? (
-				<p>Chargement...</p>
-			) : errorMessage ? (
-				<p className={styles.error}>{errorMessage}</p>
-			) : (
-				matchsList.map((match: Matchs) => (
-					<li key={match["match.info.gameId"]}>
-						<Image
-							src={
-								"http://localhost:8000/static/champion/" +
-								match["participant.championIdString"] +
-								".png"
-							}
-							alt="champ pp"
-							width={30}
-							height={30}
-							priority={true}
-						/>
-						<p>{match["match.metadata.matchId"]}</p>
-					</li>
-				))
-			)}
+		<div>
+			<div className={styles.matchsHistory}>
+				{isLoading ? (
+					<p>Chargement...</p>
+				) : errorMessage ? (
+					<p className={styles.error}>{errorMessage}</p>
+				) : (
+					matchsList.map((match: Matchs) => (
+						<li key={match["match.info.gameId"]} className={styles.matchItem}>
+							<Image
+								src={
+									"http://localhost:8000/static/champion/" +
+									match["participant.championIdString"] +
+									".png"
+								}
+								alt="champ pp"
+								width={50}
+								height={50}
+								priority={true}
+							/>
+							<p>{match["match.metadata.matchId"]}</p>
+						</li>
+					))
+				)}
+			</div>
 			<button
 				onClick={() => {
 					if (pageNumber > 1) setPageNumber(pageNumber - 1);

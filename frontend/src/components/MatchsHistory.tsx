@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Matchs } from "@/app/profile/page";
 
 import styles from "./MatchsHistory.module.css";
@@ -12,6 +13,8 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 	const [isLastPage, setIsLastPage] = useState<boolean>(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
+
+	const router = useRouter();
 
 	useEffect(() => {
 		setErrorMessage(null);
@@ -47,7 +50,8 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 					<p className={styles.error}>{errorMessage}</p>
 				) : (
 					matchsList.map((match: Matchs) => (
-						<li key={match["match.info.gameId"]} className={styles.matchItem}>
+						<li key={match["match.info.gameId"]} className={styles.matchItem}
+						onClick={() => router.push(`/match?id=${match["match.metadata.matchId"]}`)}>
 							<Image
 								src={
 									"http://localhost:8000/static/champion/" +
@@ -75,6 +79,7 @@ export default function MatchsHistory({ puuid }: { puuid: string }) {
 				type="number"
 				value={pageNumber}
 				onChange={e => setPageNumber(parseInt(e.target.value) || 1)}
+				className={styles.pageInput}
 			/>
 			<button
 				onClick={() => {

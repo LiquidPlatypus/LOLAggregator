@@ -17,12 +17,12 @@ export default async function MatchPage({
 		return <h1>Match not found</h1>;
 	}
 	const data = (await res.json()) as Matchs;
-	console.log(data.info)
+	console.log(data);
 
 	return (
-		<div>
+		<div className={styles.matchContainer}>
 			<ul className={styles.champsTab}>
-				{data.info.participants.map((participant) => (
+				{data.match.info.participants.map((participant) => (
 					<li key={participant.puuid} className={styles.champTab}>
 						<Image
 							src={
@@ -35,6 +35,39 @@ export default async function MatchPage({
 							height={50}
 						/>
 						<h3>{participant.kills}/{participant.deaths}/{participant.assists}</h3>
+						<div className={styles.itemsContainer}>
+							<ul className={styles.items}>
+								{[
+									participant.item0,
+									participant.item1,
+									participant.item2,
+									participant.item3,
+									participant.item4,
+									participant.item5,
+								].map((itemId, index) => {
+									const item = itemId ? data.items[itemId] : null;
+
+									return (
+										<li key={item?.id ?? index} className={styles.item}>
+											{item && (
+												<Image
+													src={`http://localhost:8000/static/item/${item.id}.png`}
+													alt={item.name}
+													width={30}
+													height={30}
+												/>
+											)}
+										</li>
+									);
+								})}
+							</ul>
+							<Image
+								src={`http://localhost:8000/static/item/${participant.item6}.png`}
+								alt="Item 6"
+								width={30}
+								height={30}
+							/>
+						</div>
 					</li>
 				))}
 			</ul>

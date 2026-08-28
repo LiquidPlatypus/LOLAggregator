@@ -1,3 +1,9 @@
+.matchContainer {
+	background-image: url("http://localhost:8000/static/map/map453.png");
+	background-repeat: no-repeat;
+	background-size: cover;
+}
+
 .champsTab {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -8,8 +14,29 @@
 	list-style: none;
 	padding: 0;
 	margin: 0;
+
+	backdrop-filter: blur(20px) brightness(0.5);
 }
 
 .champTab {
 	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.itemsContainer {
+	display: flex;
+	align-items: center;
+}
+
+.items {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1px;
+
+	list-style: none;
+}
+
+.item {
+
 }

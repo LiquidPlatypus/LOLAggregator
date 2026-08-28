@@ -43,12 +43,11 @@ interface Summoner {
 	summonerLevel: number;
 }
 
-interface PlayerResponse {
+export interface PlayerResponse {
 	player: Player;
 	summoner: Summoner;
 	mastery: ChampionMastery[];
 	top_mastery: ChampionMastery[];
-	matchs_history: Matchs[];
 }
 
 export default async function profilePage({

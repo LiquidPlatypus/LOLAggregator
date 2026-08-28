@@ -64,3 +64,13 @@ def read_match(puuid: str, page: int = 1, count: int = 10):
         raise HTTPException(status_code=status, detail="Too much requests to Riot API. Please try again later.")
 
     return matchs_history.to_dict(orient="records")
+
+@app.get("/match/{match_id}")
+def read_match_detail(match_id: str):
+    try:
+        match_detail = get_match(match_id)
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 500
+        raise HTTPException(status_code=status, detail="Unknown match or Riot API error. Please try again later.")
+
+    return match_detail

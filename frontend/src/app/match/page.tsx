@@ -72,6 +72,9 @@ export default async function MatchPage({
 				))}
 			</ul>
 
+			<div className={styles.matchInfo}>
+				<h1>{data.match.info.gameMode}</h1>
+			</div>
 		</div>
 	);
 }

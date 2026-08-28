@@ -2,6 +2,8 @@
 	background-image: url("http://localhost:8000/static/map/map453.png");
 	background-repeat: no-repeat;
 	background-size: cover;
+
+	display: flex;
 }
 
 .champsTab {
@@ -39,4 +41,8 @@
 
 .item {
 
+}
+
+.matchInfo {
+	backdrop-filter: blur(20px) brightness(0.5);
 }

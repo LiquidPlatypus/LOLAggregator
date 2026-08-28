@@ -18,6 +18,23 @@
   background-image: url("../../public/background.jpg");
   background-size: cover;
   background-position: center;
+
+  backdrop-filter: blur(20px);
+}
+
+.blurOverlay {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  backdrop-filter: blur(20px);
 }
 
 .main {
@@ -29,7 +46,12 @@
   align-items: center;
   justify-content: center;
   padding: 120px 60px;
-  backdrop-filter: blur(10px);
+}
+
+.searchBar {
+  position: relative;
+  top: -75px;
+  left: -10px;
 }
 
 .intro {

@@ -30,19 +30,22 @@ def read_root():
 
 @app.get("/player/{game_name}/{tag_line}")
 def read_player(game_name: str, tag_line: str):
-    player = riot_get_player(game_name, tag_line)
-    summoner = get_summoner(player["puuid"])
-    mastery_raw = get_champion_mastery(player["puuid"])
-    champion_map = load_champions()
-    mastery = process_mastery(mastery_raw, champion_map)
-    top_mastery = get_top_champs(mastery, 5)
+    try:
+        player = riot_get_player(game_name, tag_line)
+        summoner = get_summoner(player["puuid"])
+        mastery_raw = get_champion_mastery(player["puuid"])
+        champion_map = load_champions()
+        mastery = process_mastery(mastery_raw, champion_map)
+        top_mastery = get_top_champs(mastery, 5)
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 500
+        raise HTTPException(status_code=status, detail="Unknown player or Riot API error. Please try again later.")
 
     ret_dict = {
         "player": player,
         "summoner": summoner,
         "mastery": mastery.to_dict(orient="records"),
-        "top_mastery": top_mastery.to_dict(orient="records"),
-    }
+        "top_mastery": top_mastery.to_dict(orient="records")}
 
     return ret_dict
 

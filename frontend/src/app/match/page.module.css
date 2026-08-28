@@ -1,0 +1,15 @@
+.champsTab {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: repeat(5, 1fr);
+
+	grid-auto-flow: column;
+
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.champTab {
+	display: flex;
+}

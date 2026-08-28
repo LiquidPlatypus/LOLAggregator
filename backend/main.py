@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery, get_match_history, get_match
-from api.dragon import load_champions
+from api.dragon import load_champions, load_items
 from data.processor import process_mastery, get_top_champs, process_matches
 
 app = FastAPI()
@@ -69,8 +69,14 @@ def read_match(puuid: str, page: int = 1, count: int = 10):
 def read_match_detail(match_id: str):
     try:
         match_detail = get_match(match_id)
+        items_raw = load_items()
     except requests.exceptions.HTTPError as e:
         status = e.response.status_code if e.response is not None else 500
         raise HTTPException(status_code=status, detail="Unknown match or Riot API error. Please try again later.")
 
-    return match_detail
+    ret_dict = {
+        "match": match_detail,
+        "items": items_raw
+    }
+
+    return ret_dict

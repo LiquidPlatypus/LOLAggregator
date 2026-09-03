@@ -95,7 +95,7 @@ export default async function profilePage({
 					{data.mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championId}`}>
+							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}>
 								<li className={styles.champListli} key={champs.championId}>
 									<Image
 										src={
@@ -120,7 +120,7 @@ export default async function profilePage({
 					{data.top_mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championId}`}>
+							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}>
 								<li key={champs["championId"]}>
 									<Image
 										src={

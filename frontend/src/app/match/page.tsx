@@ -17,7 +17,6 @@ export default async function MatchPage({
 		return <h1>Match not found</h1>;
 	}
 	const data = (await res.json()) as Matchs;
-	console.log(data);
 
 	return (
 		<div className={styles.matchContainer}>

@@ -2,6 +2,7 @@ import MatchsHistory from "@/components/MatchsHistory";
 
 import styles from "./page.module.css";
 import Image from "next/image";
+import Link from "next/link";
 import React from "react";
 
 interface ChampionMastery {
@@ -94,20 +95,22 @@ export default async function profilePage({
 					{data.mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<li className={styles.champListli} key={champs.championId}>
-								<Image
-									src={
-										"http://localhost:8000/static/champion/" +
-										champs["championIdString"] +
-										".png"
-									}
-									alt="champ"
-									width={50}
-									height={50}
-									priority={true}
-								/>
-								<h3>{champs["championName"]}</h3>
-							</li>
+							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championId}`}>
+								<li className={styles.champListli} key={champs.championId}>
+									<Image
+										src={
+											"http://localhost:8000/static/champion/" +
+											champs["championIdString"] +
+											".png"
+										}
+										alt="champ"
+										width={50}
+										height={50}
+										priority={true}
+									/>
+									<h3>{champs["championName"]}</h3>
+								</li>
+							</Link>
 						))}
 				</div>
 			</div>
@@ -117,19 +120,21 @@ export default async function profilePage({
 					{data.top_mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<li key={champs["championId"]}>
-								<Image
-									src={
-										"http://localhost:8000/static/champion/" +
-										champs["championIdString"] +
-										".png"
-									}
-									alt="champ pp"
-									width={100}
-									height={100}
-									priority={true}
-								/>
-							</li>
+							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championId}`}>
+								<li key={champs["championId"]}>
+									<Image
+										src={
+											"http://localhost:8000/static/champion/" +
+											champs["championIdString"] +
+											".png"
+										}
+										alt="champ pp"
+										width={100}
+										height={100}
+										priority={true}
+									/>
+								</li>
+							</Link>
 						))}
 				</div>
 				<h2>Matchs history</h2>

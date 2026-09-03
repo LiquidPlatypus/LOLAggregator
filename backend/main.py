@@ -6,7 +6,7 @@ import requests
 
 from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery, get_match_history, get_match
 from api.dragon import load_champions, load_items
-from data.processor import process_mastery, get_top_champs, process_matches
+from data.processor import process_mastery, get_top_champs, process_matches, process_champion_stats
 
 app = FastAPI()
 origins = [
@@ -82,7 +82,7 @@ def read_match_detail(match_id: str):
     return ret_dict
 
 @app.get("/champion-stats/{puuid}/{champion_id}")
-def read_champion_stats(puuid: str, champion_id: str, count: int = 100):
+def read_champion_stats(puuid: str, champion_id: str, count: int = 10):
     try:
         match_ids = get_match_history(puuid, start=0, count=count)
         champion_map = load_champions()

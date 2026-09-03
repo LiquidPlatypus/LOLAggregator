@@ -39,3 +39,20 @@ def process_matches(matches_raw, champion_id_to_name,  puuid):
     df[other_cols] = df[other_cols].fillna("")
 
     return df
+
+
+def process_champion_stats(df_matchs):
+    # Grouper par championIdString et calculer les statistiques
+    champion_stats = df_matchs.groupby("participant.championIdString").agg(
+        total_matches=pd.NamedAgg(column="match.metadata.matchId", aggfunc="count"),
+        total_wins=pd.NamedAgg(column="participant.win", aggfunc="sum"),
+        total_kills=pd.NamedAgg(column="participant.kills", aggfunc="sum"),
+        total_deaths=pd.NamedAgg(column="participant.deaths", aggfunc="sum"),
+        total_assists=pd.NamedAgg(column="participant.assists", aggfunc="sum")
+    ).reset_index()
+
+    # Calculer le taux de victoire, KDA et autres statistiques
+    champion_stats["win_rate"] = (champion_stats["total_wins"] / champion_stats["total_matches"]) * 100
+    champion_stats["kda"] = (champion_stats["total_kills"] + champion_stats["total_assists"]) / champion_stats["total_deaths"].replace(0, 1)
+
+    return champion_stats

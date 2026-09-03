@@ -80,3 +80,23 @@ def read_match_detail(match_id: str):
     }
 
     return ret_dict
+
+@app.get("/champion-stats/{puuid}/{champion_id}")
+def read_champion_stats(puuid: str, champion_id: str, count: int = 100):
+    try:
+        match_ids = get_match_history(puuid, start=0, count=count)
+        champion_map = load_champions()
+        with ThreadPoolExecutor() as executor:
+            matchs_raw = list(executor.map(get_match, match_ids))
+        df_matches = process_matches(matchs_raw, champion_map, puuid)
+
+        if champion_id not in df_matches["participant.championIdString"].values:
+            raise HTTPException(status_code=404, detail="Champion not played in recent matches")
+
+        df_matches = df_matches[df_matches["participant.championIdString"] == champion_id]
+        champ_stats = process_champion_stats(df_matches)
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 500
+        raise HTTPException(status_code=status, detail="Riot API error. Please try again later.")
+
+    return champ_stats.to_dict(orient="records")

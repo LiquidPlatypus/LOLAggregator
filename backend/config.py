@@ -7,3 +7,5 @@ API_KEY = os.getenv("API_KEY")
 REGION = os.getenv("REGION", "europe")
 PLATFORM = os.getenv("PLATFORM", "euw1")
 DRAGON_PATH = os.getenv("DRAGON_PATH")
+
+USE_LOCAL_DATA = os.getenv("USE_LOCAL_DATA", "false").lower() == "true"

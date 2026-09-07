@@ -164,3 +164,4 @@ cython_debug/
 
 /backend/dragontail-*/
 *.csv
+backend/data/scraped/

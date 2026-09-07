@@ -1,3 +1,4 @@
+import time
 import requests
 from config import API_KEY, REGION, PLATFORM
 
@@ -7,9 +8,17 @@ PLATFORM_BASE = f"https://{PLATFORM}.api.riotgames.com"
 
 def _get(base, endpoint, **kwargs):
     url = f"{base}{endpoint.format(**kwargs)}"
-    response = requests.get(url, headers=HEADERS)
-    response.raise_for_status()
-    return response.json()
+
+    while True:
+        response = requests.get(url, headers=HEADERS)
+
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 1))
+            time.sleep(retry_after)
+            continue
+
+        response.raise_for_status()
+        return response.json()
 
 def get_player(game_name, tag_line):
     return _get(

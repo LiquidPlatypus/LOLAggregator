@@ -4,7 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from concurrent.futures import ThreadPoolExecutor
 import requests
 
-from api.riot import get_player as riot_get_player, get_summoner, get_champion_mastery, get_match_history, get_match
+from config import USE_LOCAL_DATA
+
+if USE_LOCAL_DATA:
+    from data.local_data import (
+        load_local_match as get_match,
+        load_local_summoner as get_summoner,
+        load_local_mastery as get_champion_mastery,
+        load_local_match_ids as get_match_history,
+    )
+else:
+    from api.riot import get_summoner, get_champion_mastery, get_match_history, get_match
+from api.riot import get_player as riot_get_player
 from api.dragon import load_champions, load_items
 from data.processor import process_mastery, get_top_champs, process_matches, process_champion_stats
 

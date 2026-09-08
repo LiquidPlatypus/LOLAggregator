@@ -32,4 +32,5 @@ def load_items(path=None):
             "stats": item.get("stats", {}),
         }
         for item_id, item in items_raw["data"].items()
+        if item.get("gold", {}).get("purchasable", False)
     }

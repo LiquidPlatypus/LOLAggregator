@@ -118,6 +118,7 @@ interface Matchs {
 - Sélecteur de langue (visible dans le wireframe header, jamais implémenté)
 - Compteur "nombre de games jouées par champion" — pas disponible via l'API mastery, nécessiterait de compter depuis l'historique de matchs
 - - **Fiche détaillée par champion (stats agrégées)** : nouvel endpoint `/champion-stats/{puuid}?count=100` — fetch les N derniers matchs (100 pour commencer, en démo), groupe par `participant.championName` avec `pandas.groupby()`, calcule pour chaque champion : nombre de games, winrate (moyenne de `participant.win`), KDA moyen. Décision : calculer TOUS les champions d'un coup plutôt qu'un par un (le coût réseau des N fetchs est le même dans les deux cas, autant avoir une vue d'ensemble). Limite connue : sur l'historique complet (~600+ matchs), la limite Riot de 100 requêtes/2min rendrait le chargement trop long (~10-12min) — solution à terme : cache/DB pour stocker les stats déjà calculées plutôt que tout refetch à chaque visite (rejoint l'idée de DB déjà notée dans l'architecture générale).
+- Timeline horizontale des achats d'items croisée aux events du match (kills/objectifs) et au matchup adverse — nécessite l'API timeline Riot, une table DB dédiée, coût élevé, à faire après la DB de base
 
 ## Bugs résolus (pour référence, éviter de refaire les mêmes erreurs)
 - NaN dans mastery → `.fillna()` ciblé par colonne

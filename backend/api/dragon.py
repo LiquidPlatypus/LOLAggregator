@@ -27,7 +27,7 @@ def load_items(path=None):
             "name": item["name"],
             "description": item["description"],
             "plaintext": item.get("plaintext", ""),
-            "gold": item.get("gold", {}),
+            "gold": item.get("gold", {}).get("total", 0),
             "tags": item.get("tags", []),
             "stats": item.get("stats", {}),
         }

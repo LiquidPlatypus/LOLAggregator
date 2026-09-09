@@ -32,6 +32,7 @@ try:
         session.add(item)
 
     session.commit()
-    session.close()
 except Exception as e:
     print(f"Error occurred while populating static data: {e}")
+finally:
+    session.close()

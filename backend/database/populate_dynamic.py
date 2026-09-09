@@ -1,5 +1,5 @@
 from .connection import Session
-from .models import User, Summoner, Champion, ChampionMastery, Match
+from .models import User, Summoner, Champion, ChampionMastery, Match, Participation
 from api.riot import get_summoner
 from data.local_data import load_local_mastery, load_local_match_ids, load_local_match
 
@@ -82,8 +82,27 @@ try:
 
         for participant in match_data["info"]["participants"]:
             if participant["puuid"] == puuid:
-
                 break
+
+        existing_participation = session.query(Participation).filter(
+            Participation.user_id == user.id,
+            Participation.match_id == match.id
+        ).first()
+
+        if existing_participation is None:
+            participation = Participation(
+                user_id=user.id,
+                match_id=match.id,
+                champion_name=participant["championName"],
+                kills=participant["kills"],
+                deaths=participant["deaths"],
+                assists=participant["assists"],
+                win=participant["win"],
+            )
+            session.add(participation)
+            print(f"Participation for match {match_id} added to the database.")
+        else:
+            print(f"Participation for match {match_id} already exists. Skipping.")
 
     session.commit()
 except Exception as e:

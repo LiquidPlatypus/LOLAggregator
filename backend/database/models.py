@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, JSON, ForeignKey, Text, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 from typing import Any
 from .connection import Base
 
@@ -56,10 +56,10 @@ class Match(Base):
     __tablename__ = "Match"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    game_id: Mapped[int] = mapped_column(Integer, unique=True)
+    game_id: Mapped[int] = mapped_column(BigInteger, unique=True)
     match_id: Mapped[str] = mapped_column(String(50), unique=True)
     game_duration: Mapped[int] = mapped_column(Integer)
-    game_creation: Mapped[int] = mapped_column(Integer)
+    game_creation: Mapped[int] = mapped_column(BigInteger)
 
 
 class Participation(Base):

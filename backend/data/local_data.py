@@ -17,7 +17,7 @@ def load_local_mastery(puuid):
     filepath = f"data/scraped/{puuid}/mastery.json"
     return load_json(filepath)
 
-def load_local_match_ids(puuid=None, start=0, count=100):
+def load_local_match_ids(puuid=None, start=0, count=1000):
     folder = "data/scraped/matches"
     if not os.path.exists(folder):
         raise FileNotFoundError(f"Match folder {folder} does not exist.")

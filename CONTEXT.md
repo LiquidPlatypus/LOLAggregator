@@ -10,7 +10,7 @@ Site perso pour rechercher un joueur League of Legends (via Riot API) et affiche
 - `backend/` : Python + FastAPI (logique métier, appels Riot API, transformation des données)
 - `frontend/` : Next.js (App Router) + TypeScript + CSS Modules (pas de Tailwind — préférence explicite de l'utilisateur, jugé peu lisible)
 - Communication : frontend fetch le backend en HTTP/JSON (`http://localhost:8000`)
-- **Base de données : PostgreSQL, lancée via Docker (conteneur `lolaggregator-db`)** — mise en place cette session (voir section dédiée plus bas)
+- **Base de données : PostgreSQL, lancée via Docker (conteneur `lolaggregator-db`)** — tables statiques ET dynamiques maintenant peuplées (voir sections dédiées plus bas)
 - Déploiement futur envisagé (pas encore fait) : Docker (1 conteneur par service : backend, frontend, nginx, DB), docker-compose pour orchestrer, Nginx en reverse proxy. **Ordre retenu : d'abord faire fonctionner chaque service en local, Docker vient ensuite encapsuler ce qui marche déjà — pas l'inverse.**
 
 ## Décisions clés du backend
@@ -33,7 +33,7 @@ Site perso pour rechercher un joueur League of Legends (via Riot API) et affiche
 - `config.py` : variables d'env (`API_KEY`, `REGION`, `PLATFORM`, `DRAGON_PATH`, `USE_LOCAL_DATA`)
 - `scraper.py` : scraping one-shot de toutes les données perso (matchs + profil) vers des JSON locaux, relançable pour update (skip si déjà présent)
 - `local_data.py` : lecture des JSON scrapés, avec la **même signature** que les fonctions `riot.py` équivalentes (permet l'alias transparent)
-- `database/` : package Postgres (`connection.py`, `models.py`, `init_db.py`, `populate_static.py`) — voir section dédiée
+- `database/` : package Postgres (`connection.py`, `models.py`, `init_db.py`, `populate_static.py`, `populate_dynamic.py`) — voir section dédiée
 
 ### Points techniques importants côté backend
 - **Fichiers statiques** : images Dragontail (profileicon, champion) servies via `StaticFiles` de FastAPI, montées sur `/static` → `http://localhost:8000/static/champion/{championIdString}.png` ou `/static/profileicon/{profileIconId}.png`
@@ -42,10 +42,10 @@ Site perso pour rechercher un joueur League of Legends (via Riot API) et affiche
 - **Gestion des NaN** : `pd.json_normalize` sur des données Riot API crée des colonnes avec NaN quand une clé est absente pour certaines entrées (ex: milestones de mastery, challenges de match selon le rôle joué). Pattern retenu : cibler par type de colonne avec `df.select_dtypes(include="number")` → `fillna(0)`, et `select_dtypes(exclude="number")` → `fillna("")`. Ne jamais faire un `fillna` générique sur tout le DataFrame sans réfléchir (casse les colonnes contenant des listes).
 - **Encoding** : toujours ouvrir les fichiers Dragontail avec `encoding="utf-8"` pour éviter les problèmes d'accents mal interprétés
 - **`process_matches(matches_raw, puuid)`** : pour chaque match, cherche le participant correspondant au puuid recherché via `next((p for p in match["info"]["participants"] if p["puuid"] == puuid), None)`, puis construit une liste de `{"match": match, "participant": participant}` avant le `json_normalize`. Résultat : après normalize, les clés sont préfixées `match.info.gameId`, `participant.championName`, `participant.kills`, etc.
-- **Dragontail version** : dossier `dragontail-16.16.1/16.16.1/data/fr_FR/`, chemin construit via `os.path.join(DRAGON_PATH, "champion.json")`. Penser à mettre à jour la version régulièrement (nouveaux champions sinon `championName` = "Unknown").
+- **Dragontail version** : dossier `dragontail-16.16.1/16.16.1/data/fr_FR/`, chemin construit via `os.path.join(DRAGON_PATH, "champion.json")`. Un `champion.json` mis à jour (contenant les champions récents type Briar, id 233) a été installé cette session — penser à re-régénérer/mettre à jour régulièrement (nouveaux champions sinon `championName` = "Unknown" et foreign key violation côté DB).
 - **`.env`** nécessite un redémarrage serveur pour être rechargé après modif.
 
-## Scraper local (pont temporaire dev, avant la DB)
+## Scraper local (pont temporaire dev, avant utilisation exclusive de la DB)
 **Objectif** : éviter de rappeler l'API Riot en boucle pendant le dev (limite dev key = 100 req/2min + 20 req/1s), en aspirant une fois toutes les données perso et en les rejouant depuis le disque.
 
 - **`scraper.py`** :
@@ -57,26 +57,29 @@ Site perso pour rechercher un joueur League of Legends (via Riot API) et affiche
 
 - **`local_data.py`** : miroir en lecture de `scraper.py`, avec `load_json(filepath)` factorisée (un seul point de lecture/erreur, réutilisé par toutes les fonctions) :
   - `load_local_match(match_id)`, `load_local_summoner(puuid)`, `load_local_mastery(puuid)`
-  - `load_local_match_ids(puuid=None, start=0, count=100)` : liste les fichiers dans `data/scraped/matches/`, **trie par ID décroissant** (`match_ids.sort(key=lambda mid: int(mid.split("_")[1]), reverse=True)` — la partie numérique de l'ID Riot est croissante avec le temps, donc suffisant pour trier chronologiquement sans ouvrir chaque JSON), puis slice `[start:start+count]` pour reproduire une vraie pagination. `puuid` gardé en paramètre mais ignoré (juste pour matcher la signature de `get_match_history`)
+  - `load_local_match_ids(puuid=None, start=0, count=100)` : liste les fichiers dans `data/scraped/matches/`, **trie par ID décroissant** (`match_ids.sort(key=lambda mid: int(mid.split("_")[1]), reverse=True)` — la partie numérique de l'ID Riot est croissante avec le temps, donc suffisant pour trier chronologiquement sans ouvrir chaque JSON), puis slice `[start:start+count]` pour reproduire une vraie pagination. `puuid` gardé en paramètre mais ignoré (juste pour matcher la signature de `get_match_history`). **`count` doit être ajusté explicitement (ex: `count=1000`) pour couvrir tout l'historique scrapé — la valeur par défaut (100) ne remonte que les 100 matchs les plus récents.**
 
 - **Bascule dev/prod (`USE_LOCAL_DATA`)** : flag dans `.env`/`config.py`. Dans `main.py`, import conditionnel avec alias (`load_local_summoner as get_summoner`, etc.) — `read_player` et le reste du code n'ont **aucune idée** de la source réelle des données, transparence totale grâce aux alias + signatures identiques entre `riot.py` et `local_data.py`.
 
 - **Bug vécu (résolu)** : `os.listdir` ne garantit pas d'ordre stable → sans le tri, pagination incohérente d'un appel à l'autre.
 
-## Base de données PostgreSQL (mise en place cette session)
+## Base de données PostgreSQL
 
 ### Setup
 - Conteneur Docker : `docker run --name lolaggregator-db -e POSTGRES_PASSWORD=... -e POSTGRES_DB=lolaggregator -p 5432:5432 -d postgres`
+- Si le conteneur existe déjà (redémarrage machine) : `docker start lolaggregator-db` (pas besoin de `docker run` à nouveau, qui échoue avec un conflit de nom)
 - Connexion via `CONNECTION_STRING` dans `.env` backend, format `postgresql://postgres:MOTDEPASSE@localhost:5432/lolaggregator`
-- Client d'exploration utilisé : DataGrip (même identifiants que la connection string)
-- **Venv backend nettoyé** cette session : l'ancien venv traînait tous les résidus de la version Streamlit (`streamlit`, `altair`, `plotly`, `jupyter`...). Nouveau venv créé, dépendances réinstallées proprement : `fastapi`, `uvicorn`, `requests`, `pandas`, `python-dotenv`, `sqlalchemy`, `psycopg2-binary`. `requirements.txt` regénéré via `pip freeze`.
+- Client d'exploration : DataGrip (même identifiants que la connection string) **ou**, sans DataGrip disponible, `psql` directement depuis le conteneur : `docker exec -it lolaggregator-db psql -U postgres -d lolaggregator`, puis `\dt` (lister les tables), `SELECT * FROM "Table";` (guillemets doubles nécessaires pour les noms de table en majuscule), `\q` (quitter)
+- **Multi-PC** : chaque machine a son propre conteneur Docker / sa propre base (pas de partage automatique). Après un changement de PC : relancer/redémarrer Docker, recréer le `.env`, puis **toujours relancer `init_db` + `populate_static` avant `populate_dynamic`** sur une base neuve.
+- **Venv backend nettoyé** : l'ancien venv traînait tous les résidus de la version Streamlit (`streamlit`, `altair`, `plotly`, `jupyter`...). Nouveau venv créé, dépendances réinstallées proprement : `fastapi`, `uvicorn`, `requests`, `pandas`, `python-dotenv`, `sqlalchemy`, `psycopg2-binary`. `requirements.txt` regénéré via `pip freeze`.
 
 ### Structure du package `database/`
 - **`database/connection.py`** : `engine` (via `create_engine(CONNECTION_STRING)`), `Base` (via `class Base(DeclarativeBase)`), `Session` (fabrique via `sessionmaker(engine)`)
 - **`database/models.py`** : toutes les classes de tables (choix : un seul fichier plutôt qu'un fichier par table, pour éviter les imports circulaires vu le nombre de relations croisées entre les 8 tables). Import relatif `from .connection import Base`.
 - **`database/__init__.py`** : fichier vide, nécessaire pour que Python reconnaisse `database/` comme un vrai package et accepte les imports relatifs (`from .connection import ...`) — sans lui, PyCharm/Python lève une erreur "relative import outside of a package".
-- **`database/init_db.py`** : script one-shot, importe toutes les classes de `models.py` (nécessaire pour que `Base.metadata` les "voie") puis `Base.metadata.create_all(engine)`. Lancé une fois avec `python -m database.init_db`.
+- **`database/init_db.py`** : script one-shot, importe toutes les classes de `models.py` (nécessaire pour que `Base.metadata` les "voie") puis `Base.metadata.create_all(engine)`. Lancé une fois avec `python -m database.init_db`. **Ne modifie jamais une table déjà existante** (voir section migrations manuelles plus bas) — ne fait que créer les tables manquantes.
 - **`database/populate_static.py`** : peuple `Champion` et `Item` depuis Dragontail. Ouvre une seule `Session()`, boucle sur `load_champions()`/`load_items()`, `session.get(Champion, id)` (recherche par clé primaire) pour skip si déjà présent avant chaque `session.add(...)`, un seul `commit()`/`close()` à la fin (hors des boucles). Lancé avec `python -m database.populate_static`, relançable sans erreur de doublon.
+- **`database/populate_dynamic.py`** (nouveau cette session) : peuple les 6 tables dynamiques (`User`, `Summoner`, `ChampionMastery`, `Match`, `Participation`, `ParticipationItem`) depuis les JSON scrapés (`data/scraped/`), dans cet ordre pour respecter les foreign keys. Lancé avec `python -m database.populate_dynamic`. Détail de la logique dans la section dédiée plus bas.
 
 ### Schéma (8 tables)
 
@@ -84,23 +87,36 @@ Site perso pour rechercher un joueur League of Legends (via Riot API) et affiche
 - **`Champion`** : `id` (PK), `name` (nom affiché), `normalized_name` (nom fichier, sans accents)
 - **`Item`** : `id` (PK), `name` (`String(100)`), `description`/`plaintext` (**`Text`**, pas `String` — les descriptions HTML de certains items dépassent largement 500 caractères), `gold` (`Integer`, extrait de `gold.total` dans le JSON brut — `gold` est un objet avec base/total/sell/purchasable, pas juste un nombre), `tags` (`Mapped[list[str]]` + `mapped_column(JSON)`), `stats` (`Mapped[dict[str, Any]]` + `mapped_column(JSON)`, `Any` importé de `typing`). **Filtre à l'insertion** : seuls les items avec `gold.purchasable == True` sont gardés (voir section backend plus haut).
 
-**Tables dynamiques** (à peupler depuis le scraper/API — prochaine étape) :
-- **`User`** : `id` (PK technique), `puuid` (`unique=True`), `game_name`, `tag_line` (`String(10)`, marge de sécurité au-delà des ~5 caractères habituels)
+**Tables dynamiques** (peuplées depuis le scraper via `populate_dynamic.py`) :
+- **`User`** : `id` (PK technique), `puuid` (`unique=True`), `game_name`, `tag_line` (`String(10)`, marge de sécurité au-delà des ~5 caractères habituels). **`game_name`/`tag_line` ne sont pas dans les JSON scrapés (summoner/mastery) → saisis à la main dans le script**, acceptable pour un usage perso mono-joueur.
 - **`Summoner`** : `id` (PK), `user_id` (FK → `User.id`), `profile_icon_id`, `summoner_level` — séparée de `User` car ces données évoluent dans le temps
-- **`Match`** : `id` (PK technique), `game_id` (`unique=True`), `match_id` (`String(50)`, `unique=True`), `game_duration`, `game_creation` — table indépendante des joueurs (rien ici ne dépend d'un `user` précis)
-- **`Participation`** : table de jointure `User` ↔ `Match` (many-to-many : un match a 10 joueurs, un joueur a plusieurs matchs). `user_id` (FK), `match_id` (FK), + tout ce qui dépend de la **combinaison** joueur+match : `champion_name`, `kills`, `deaths`, `assists`, `win` (`Mapped[bool]`, pas besoin de préciser le type SQL, déduit automatiquement)
+- **`Match`** : `id` (PK technique), `game_id` (**`BigInteger`**, `unique=True`), `match_id` (`String(50)`, `unique=True`), `game_duration` (`Integer`), `game_creation` (**`BigInteger`**) — table indépendante des joueurs. `game_id` et `game_creation` dépassent la limite d'un `Integer` Postgres classique (~2,15 milliards) → typés en `BigInteger`.
+- **`Participation`** : table de jointure `User` ↔ `Match` (many-to-many : un match a 10 joueurs, un joueur a plusieurs matchs). `user_id` (FK), `match_id` (FK, entier technique — à ne pas confondre avec `Match.match_id` le string Riot), + tout ce qui dépend de la **combinaison** joueur+match : `champion_name`, `kills`, `deaths`, `assists`, `win` (`Mapped[bool]`, pas besoin de préciser le type SQL, déduit automatiquement)
 - **`ChampionMastery`** : table de jointure `User` ↔ `Champion`. `user_id` (FK), `champion_id` (FK), `champion_points`, `champion_level`
-- **`Participation_item`** : table de jointure `Participation` ↔ `Item` (un joueur a plusieurs items dans un match, un item apparaît dans plusieurs participations). `participation_id` (FK), `item_id` (FK) — pas de colonne supplémentaire, sert uniquement de lien. Représente l'**inventaire final** (`item0`-`item6` déjà présents dans les données participant Riot), pas l'historique d'achat complet (nécessiterait l'API timeline, mise de côté — voir plus bas).
+- **`ParticipationItem`** (table SQL `Participation_item`) : table de jointure `Participation` ↔ `Item` (un joueur a plusieurs items dans un match, un item apparaît dans plusieurs participations). `participation_id` (FK), `item_id` (FK) — pas de colonne supplémentaire, sert uniquement de lien. Représente l'**inventaire final** (`item0`-`item6` déjà présents dans les données participant Riot), pas l'historique d'achat complet (nécessiterait l'API timeline, mise de côté — voir plus bas).
 
 **Principe retenu à chaque table** : une info vit à l'endroit qui a la bonne "granularité" — au niveau `Match` si elle concerne le match entier (`gameDuration`), au niveau `Participation` si elle dépend du joueur+match (`championName`, `kills`). Dès qu'une relation est "plusieurs à plusieurs", passer par une table de jointure plutôt qu'une FK directe.
 
-### Concepts SQLAlchemy vus cette session (pour quelqu'un venant de Prisma)
+### Peuplement des tables dynamiques (`populate_dynamic.py`)
+Script écrit et testé cette session, structure générale :
+- Une seule `Session()` ouverte en haut du fichier, un seul `try/except/finally` englobant tout, `session.close()` dans le `finally` (garantit la fermeture même en cas d'erreur en cours de route)
+- Un seul `session.commit()` final juste avant le `except` (pas de commit par itération de boucle) — évite les commits multiples inutiles et garantit qu'aucune sauvegarde partielle ne subsiste en cas d'erreur en cours de boucle
+- Pattern répété pour chaque table : `session.query(Table).filter(...).first()` pour vérifier l'existence AVANT insertion (`session.get(Table, pk)` uniquement quand la PK est déjà connue, ex: vérifier qu'un `champion_id`/`item_id` référencé existe bien dans `Champion`/`Item`), puis `if/else` pour créer ou réutiliser l'entrée existante — **toujours réassigner la variable dans le `else`** (`user = existing_user`, `match = existing_match`, `participation = existing_participation`) pour que la suite du script puisse utiliser l'objet (et son `.id`) qu'il ait été créé ou déjà présent
+- Ordre de peuplement respectant les foreign keys : `User` → `Summoner` → `ChampionMastery` (boucle sur `load_local_mastery`) → pour chaque `Match` (boucle sur `load_local_match_ids(puuid, count=1000)`) : `Match` → `Participation` (via `next((p for p in match_data["info"]["participants"] if p["puuid"] == puuid), None)`, pattern repris de `process_matches`) → `ParticipationItem` (boucle `for i in range(7): item_id = participant[f"item{i}"]`)
+- **IDs fantômes** : certains `championId`/`item_id` référencés dans les mastery/matchs n'existent pas dans Dragontail (ex: `championId=60028`, probablement lié à un mode spécial type Arena/Swarm — pas un vrai champion jouable). Systématiquement vérifiés avec `session.get(Champion, champion_id)` / `session.get(Item, item_id)` avant insertion ; `continue` (skip silencieux avec `print` informatif) si absent, plutôt que de laisser la foreign key violation planter le script.
+- **Items vides** : `item0`-`item6` valent `0` quand le slot d'inventaire est vide → skip explicite (`if item_id == 0: continue`) avant même de vérifier la table `Item`.
+- **`load_local_match_ids(puuid, count=1000)`** : bien penser à passer un `count` élevé, le défaut de `100` (voir signature dans `local_data.py`) ne remonte que les 100 matchs les plus récents et tronque silencieusement le reste de l'historique.
+
+### Concepts SQLAlchemy vus (pour quelqu'un venant de Prisma)
 - Une table = une classe Python héritant de `Base`, avec `__tablename__` et des attributs `Mapped[type_python] = mapped_column(TypeSQL, options...)`
-- `Mapped[...]` attend un type **Python** (`int`, `str`, `bool`, `list[str]`, `dict[str, Any]`), pas un type SQL — les deux sont donnés séparément (annotation + `mapped_column(...)`)
+- `Mapped[...]` attend un type **Python** (`int`, `str`, `bool`, `list[str]`, `dict[str, Any]`), pas un type SQL — les deux sont donnés séparément (annotation + `mapped_column(...)`). Les warnings d'IDE type "`Mapped[int]` is not assignable to `int`" lors de l'instanciation (`User(id=..., ...)`) sont des **faux positifs** connus (limitation du typage statique avec SQLAlchemy) — le code fonctionne correctement à l'exécution.
 - FK simple : `mapped_column(ForeignKey("NomTable.colonne"))` (string, pas une référence directe à la classe)
 - Une session s'obtient via la fabrique : `session = Session()`, puis `session.add(obj)` (répété autant de fois que nécessaire), et un seul `session.commit()` + `session.close()` à la fin — pas par itération de boucle
 - `session.get(Classe, cle_primaire)` : recherche rapide par PK, renvoie l'objet ou `None`
+- `session.query(Classe).filter(Classe.colonne == valeur, Classe.autre_colonne == autre_valeur).first()` : recherche par colonne(s) autre(s) que la PK (utile pour vérifier l'unicité avant insertion sur un champ non-PK, ou une combinaison de colonnes comme `user_id` + `match_id`) ; plusieurs conditions séparées par une virgule = ET logique
+- Type `BigInteger` (import `from sqlalchemy import BigInteger`) : nécessaire pour les colonnes dont la valeur dépasse ~2,15 milliards (limite d'un `Integer` Postgres classique) — ex: timestamps en millisecondes (`gameCreation`), certains IDs Riot (`gameId`) à mesure qu'ils grandissent avec le temps
 - Erreur classique : oublier d'importer les classes de `models.py` avant `Base.metadata.create_all(engine)` → la table n'est pas créée car `Base` ne "voit" que ce qui a été importé
+- **Migration manuelle en dev** : `Base.metadata.create_all(engine)` ne modifie jamais le schéma d'une table déjà existante en base (ex: changer `Integer` en `BigInteger` sur une colonne). En phase de dev sans données de prod à préserver, la solution la plus simple est `DROP TABLE "NomTable" CASCADE;` (le `CASCADE` supprime aussi les contraintes/FK dépendantes dans les autres tables — vérifier au préalable qu'aucune donnée importante n'existe dans les tables dépendantes) puis relancer `python -m database.init_db` pour recréer la table avec le schéma à jour.
 
 ## Décisions clés du frontend
 - **Recherche joueur avec vérification silencieuse** : `SearchBar.tsx` fait un debounce de 500ms (`setTimeout` + `clearTimeout` en cleanup de `useEffect`) sur `[gameName, tagLine]`. Si les deux champs sont non-vides après le délai, fetch `/player/{gameName}/{tagLine}` ; si `200`, affiche une carte cliquable sous la barre (photo + gameName#tagLine) via un state `foundPlayer: PlayerResponse | null` ; sinon carte masquée. Clic sur la carte → redirige vers `/profile?...`. Pas de bouton "Search" nécessaire. Riot n'offre pas de recherche par préfixe/autocomplétion (seulement gameName+tagLine exacts) — contrainte API, pas de contournement simple sans base de données perso.
@@ -183,14 +199,15 @@ interface Matchs {
 - `error.tsx` (filet de sécurité pour erreurs non prévues, backend injoignable)
 - Sélecteur de langue (visible dans le wireframe header, jamais implémenté)
 - Compteur "nombre de games jouées par champion" — pas disponible via l'API mastery, nécessiterait de compter depuis l'historique de matchs
-- **Fiche détaillée par champion (stats agrégées)** : nouvel endpoint `/champion-stats/{puuid}?count=100` — fetch les N derniers matchs, groupe par `participant.championName` avec `pandas.groupby()`, calcule pour chaque champion : nombre de games, winrate, KDA moyen. Décision : calculer TOUS les champions d'un coup plutôt qu'un par un. **Doit maintenant s'appuyer sur la DB** (requêtes SQL) plutôt que sur des refetchs API — voir raisonnement ci-dessous.
-- **Stats par item (optionnellement filtrées par champion)** : ex. "winrate quand j'ai Infinity Edge sur Jinx". Requête = jointure `Participation_item` (filtre `item_id`) + `Participation` (filtre `championName`, lit `win`) → agrégation. La table statique `Item` ne sert que pour l'affichage (nom, image), pas pour le calcul.
+- **Fiche détaillée par champion (stats agrégées)** : nouvel endpoint `/champion-stats/{puuid}?count=100` — fetch les N derniers matchs, groupe par `participant.championName` avec `pandas.groupby()`, calcule pour chaque champion : nombre de games, winrate, KDA moyen. Décision : calculer TOUS les champions d'un coup plutôt qu'un par un. Peut maintenant s'appuyer sur la DB (requêtes SQL) plutôt que sur des refetchs API, les tables dynamiques étant peuplées.
+- **Stats par item (optionnellement filtrées par champion)** : ex. "winrate quand j'ai Infinity Edge sur Jinx". Requête = jointure `ParticipationItem` (filtre `item_id`) + `Participation` (filtre `championName`, lit `win`) → agrégation. La table statique `Item` ne sert que pour l'affichage (nom, image), pas pour le calcul.
 - **Pourquoi la DB est indispensable (pas juste un confort dev)** : même avec une clé API de prod (limite plus haute), refetcher l'historique complet d'un joueur à chaque visite de page reste un problème — (1) ça ne scale pas avec le nombre de visiteurs/visites répétées, (2) un match une fois joué ne change **jamais**, donc le refetch est un gaspillage même sans contrainte de rate limit. La DB cache les matchs une fois pour toutes ; filtrer par champion/item devient une requête SQL plutôt qu'un fetch API.
 - **Timeline horizontale des achats d'items** croisée aux events du match (kills/objectifs) et au matchup adverse (même rôle/lane, via `teamPosition`) — nécessite l'API timeline Riot (`/lol/match/v5/matches/{matchId}/timeline`, call séparé et coûteux), une table DB dédiée aux events avec timestamps. Explicitement mise de côté : trop ambitieuse avant d'avoir la DB de base fonctionnelle. Présentation envisagée : axe temporel horizontal avec icônes d'items placées au moment de l'achat + marqueurs d'events au-dessus.
+- **Endpoints exposant les données de la DB au frontend** : les tables dynamiques sont peuplées mais rien ne les interroge encore côté API/frontend (le `/player/...` actuel appelle toujours l'API Riot / les fichiers scrapés, pas la DB) — prochaine étape logique une fois cette base validée.
 
 ## Bugs résolus (pour référence, éviter de refaire les mêmes erreurs)
 - NaN dans mastery → `.fillna()` ciblé par colonne
-- Version Dragontail périmée → champion manquant (`championName` = "Unknown" en fallback)
+- Version Dragontail périmée → champion manquant (`championName` = "Unknown" en fallback), et côté DB → foreign key violation sur `ChampionMastery`/`Participation` tant que `champion.json` n'est pas mis à jour et `populate_static.py` relancé
 - Erreur d'hydratation React causée par l'extension navigateur Dark Reader (pas un bug de code — vérifier en navigation privée en cas de doute)
 - `next/image` bloque `localhost` par défaut (SSRF protection) → `remotePatterns` + `dangerouslyAllowLocalIP`
 - Boucle infinie silencieuse dans `_get` (retry 429) : `raise_for_status()`/`return` mal indentés, hors de la `while` → jamais de sortie de boucle en cas de succès
@@ -199,6 +216,16 @@ interface Matchs {
 - `String(500)` trop court pour les descriptions d'items Riot (HTML) → passé en `Text` (longueur illimitée)
 - Champ `inStore` de Dragontail trompeur pour filtrer les items achetables (absent sur la plupart des vrais items, toujours `false` quand présent) → utiliser `gold.purchasable == True` à la place
 - `UniqueViolation` en relançant un script de population → ajout d'un check `session.get(Classe, id)` avant chaque `session.add()` pour skip les entrées déjà présentes, plutôt que de vider/recréer la table à chaque run
+- **`session.close()` dans le `try` au lieu du `finally`** → si une exception survenait avant cette ligne (ex: pendant un `commit()`), la session restait ouverte (fuite de connexion). Corrigé en déplaçant `close()` dans un bloc `finally`.
+- **Vérification d'existence par `.count() == 0` au lieu de filtrer sur la clé métier** (ex: `puuid`) → fonctionne par hasard avec un seul enregistrement, casse dès qu'on veut en gérer plusieurs. Corrigé avec `session.query(Table).filter(Table.colonne == valeur).first()`.
+- **Boucles imbriquées par erreur d'indentation** dans `populate_dynamic.py` (boucle `for match_id` nichée dans `for mastery_data`, et bloc `Match`/`Participation` partiellement désindenté hors de sa propre boucle `for match_id`) → produisait des dizaines de répétitions du même match/participation en sortie. Résolu en revérifiant systématiquement le niveau d'indentation de chaque bloc par rapport à la boucle qui doit le contenir.
+- **`integer out of range` sur `Match.game_id`/`Match.game_creation`** → ces valeurs (timestamp en ms, ID de partie croissant) dépassent la limite d'un `Integer` Postgres (~2,15 milliards) → colonnes reconverties en `BigInteger` dans `models.py`, puis table `Match` droppée (`DROP TABLE "Match" CASCADE;`) et recréée (`init_db`) car `create_all` ne migre pas les tables existantes.
+- **Foreign key violation sur des `champion_id`/`item_id` "fantômes"** (ex: `championId=60028`, lié à un mode de jeu spécial type Arena, absent de Dragontail) → vérification systématique avec `session.get(Champion, id)` / `session.get(Item, id)` avant insertion, skip silencieux (`continue`) si absent.
+- **`load_local_match_ids(puuid)` sans `count` explicite** → ne remonte que les 100 matchs les plus récents (valeur par défaut du paramètre), tronquant silencieusement le reste de l'historique scrapé → toujours passer `count=1000` (ou une valeur couvrant l'historique complet) explicitement.
+- **Variable `participant` potentiellement non définie** en sortie de boucle `for participant in ...: if ...: break` (si aucun match ne correspondait au `puuid,` cas normalement impossible mais signalé par l'IDE) → remplacé par le pattern `next((p for p in ... if ...), None)` (repris de `process_matches`) + vérification explicite `if participant is None: continue`.
 
 ## Prochaine étape immédiate
-Peupler les tables **dynamiques** (`User`, `Summoner`, `Match`, `Participation`, `ChampionMastery`, `Participation_item`) depuis les JSON déjà scrapés (`data/scraped/`) — plus complexe que `populate_static.py` car il faut résoudre les relations entre tables (retrouver/créer le `User` avant d'insérer sa `Participation`, etc.) au lieu d'inserts indépendants.
+Les 8 tables (statiques + dynamiques) sont maintenant peuplées et vérifiées (`psql`/DataGrip). Prochaines pistes, à prioriser ensemble :
+- Créer un/des endpoint(s) FastAPI qui interrogent la DB (au lieu de l'API Riot / des fichiers scrapés) pour servir les données au frontend
+- Construire l'endpoint `/champion-stats/{puuid}` (stats agrégées par champion, cf. section "Fonctionnalités discutées")
+- Page de détail d'un match (`/match?id=...`, route frontend déjà présente mais page vide)

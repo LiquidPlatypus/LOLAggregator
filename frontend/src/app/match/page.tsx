@@ -20,8 +20,12 @@ export default async function MatchPage({
 
 	return (
 		<div className={styles.matchContainer}>
+			<div className={styles.matchInfo}>
+				<h1>{data.match.info.gameMode}</h1>
+			</div>
+
 			<ul className={styles.champsTab}>
-				{data.match.info.participants.map((participant) => (
+				{data.match.info.participants.map(participant => (
 					<li key={participant.puuid} className={styles.champTab}>
 						<Image
 							src={
@@ -33,7 +37,9 @@ export default async function MatchPage({
 							width={50}
 							height={50}
 						/>
-						<h3>{participant.kills}/{participant.deaths}/{participant.assists}</h3>
+						<h3>
+							{participant.kills}/{participant.deaths}/{participant.assists}
+						</h3>
 						<div className={styles.itemsContainer}>
 							<ul className={styles.items}>
 								{[
@@ -47,7 +53,7 @@ export default async function MatchPage({
 									const item = itemId ? data.items[itemId] : null;
 
 									return (
-										<li key={item?.id ?? index} className={styles.item}>
+										<li key={index} className={styles.item}>
 											{item && (
 												<Image
 													src={`http://localhost:8000/static/item/${item.id}.png`}
@@ -70,10 +76,6 @@ export default async function MatchPage({
 					</li>
 				))}
 			</ul>
-
-			<div className={styles.matchInfo}>
-				<h1>{data.match.info.gameMode}</h1>
-			</div>
 		</div>
 	);
 }

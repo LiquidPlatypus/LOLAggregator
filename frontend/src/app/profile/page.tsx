@@ -70,11 +70,13 @@ export default async function profilePage({
 	return (
 		<div
 			className={styles.container}
-			style={{
-				"--backgroundImageUrl": `url(${backgroundImageUrl})`,
-			} as React.CSSProperties}
+			style={
+				{
+					"--backgroundImageUrl": `url(${backgroundImageUrl})`,
+				} as React.CSSProperties
+			}
 		>
-		<div className={styles.leftSide}>
+			<div className={styles.leftSide}>
 				<div className={styles.profileInfos}>
 					<Image
 						src={
@@ -95,8 +97,11 @@ export default async function profilePage({
 					{data.mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}>
-								<li className={styles.champListli} key={champs.championId}>
+							<Link
+								key={champs.championId}
+								href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}
+							>
+								<li className={styles.champListli}>
 									<Image
 										src={
 											"http://localhost:8000/static/champion/" +
@@ -120,8 +125,11 @@ export default async function profilePage({
 					{data.top_mastery
 						.filter((champs: ChampionMastery) => champs.championName !== "Unknown")
 						.map((champs: ChampionMastery) => (
-							<Link href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}>
-								<li key={champs["championId"]}>
+							<Link
+								key={champs["championId"]}
+								href={`/champion?puuid=${data.summoner.puuid}&id=${champs.championIdString}`}
+							>
+								<li>
 									<Image
 										src={
 											"http://localhost:8000/static/champion/" +

@@ -1,5 +1,5 @@
 from .connection import Session
-from .models import User, Summoner, Champion, ChampionMastery, Match, Participation
+from .models import User, Summoner, Champion, ChampionMastery, Match, Participation, Item, ParticipationItem
 from api.riot import get_summoner
 from data.local_data import load_local_mastery, load_local_match_ids, load_local_match
 
@@ -38,10 +38,10 @@ try:
     else:
         print("Summoner already exists. Skipping.")
 
+    # --- ChampionMastery ---
     for mastery_data in load_local_mastery(puuid):
         champion_id = mastery_data["championId"]
 
-        # Skip si le champion n'existe pas dans la table Champion (ID fantôme type Arena)
         if session.get(Champion, champion_id) is None:
             print(f"Champion id {champion_id} not found in Champion table. Skipping.")
             continue
@@ -63,6 +63,7 @@ try:
             mastery = existing_mastery
             print("Champion mastery already exists. Skipping.")
 
+    # --- Match / Participation / Participation_item ---
     for match_id in load_local_match_ids(puuid):
         match_data = load_local_match(match_id)
         existing_match = session.query(Match).filter(Match.match_id == match_id).first()
@@ -80,9 +81,14 @@ try:
             match = existing_match
             print(f"Match {match_id} already exists. Skipping.")
 
-        for participant in match_data["info"]["participants"]:
-            if participant["puuid"] == puuid:
-                break
+        participant = next(
+            (p for p in match_data["info"]["participants"] if p["puuid"] == puuid),
+            None
+        )
+
+        if participant is None:
+            print(f"Participant not found for match {match_id}. Skipping.")
+            continue
 
         existing_participation = session.query(Participation).filter(
             Participation.user_id == user.id,
@@ -102,7 +108,34 @@ try:
             session.add(participation)
             print(f"Participation for match {match_id} added to the database.")
         else:
+            participation = existing_participation
             print(f"Participation for match {match_id} already exists. Skipping.")
+
+        # --- Participation_item ---
+        for i in range(7):
+            item_id = participant[f"item{i}"]
+
+            if item_id == 0:
+                continue
+
+            if session.get(Item, item_id) is None:
+                print(f"Item id {item_id} not found in Item table. Skipping.")
+                continue
+
+            existing_participation_item = session.query(ParticipationItem).filter(
+                ParticipationItem.participation_id == participation.id,
+                ParticipationItem.item_id == item_id
+            ).first()
+
+            if existing_participation_item is None:
+                participation_item = ParticipationItem(
+                    participation_id=participation.id,
+                    item_id=item_id
+                )
+                session.add(participation_item)
+                print(f"Item {item_id} added for participation {participation.id}.")
+            else:
+                print(f"Item {item_id} already linked. Skipping.")
 
     session.commit()
 except Exception as e:

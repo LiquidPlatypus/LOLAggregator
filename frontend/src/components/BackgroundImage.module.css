@@ -1,0 +1,8 @@
+.backgroundImage {
+	position: fixed;
+	inset: 0;
+	background-image: url("../../public/background.jpg");
+	background-size: cover;
+	background-position: center;
+	z-index: 0;
+}
